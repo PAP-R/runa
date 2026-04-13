@@ -19,7 +19,7 @@
 			"args": [],
 			"stopAtEntry": false,
 			"cwd": "${command:cmake.getLaunchTargetDirectory}",
-			"console": "internalConsole"
+			"console": "integratedTerminal"
 		}
 	]
 }

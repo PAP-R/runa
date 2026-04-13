@@ -2,9 +2,18 @@
 	path = external/glm
 	url = git@github.com:g-truc/glm.git
 	branch = master
+[submodule "pfr"]
+	path = external/pfr
+	url = git@github.com:boostorg/pfr.git
+	branch = master
+[submodule "ink-stroke-modeler"]
+	path = external/ink-stroke-modeler
+	url = git@github.com:google/ink-stroke-modeler.git
+	branch = main
+
 [submodule "sdl"]
 	path = external/sdl
-	url = https://github.com/libsdl-org/SDL.git
+	url = git@github.com:libsdl-org/SDL.git
 	branch = main
 [submodule "sdl-shadercross"]
 	path = external/sdl-shadercross
@@ -14,11 +23,3 @@
 	path = external/sdl-ttf
 	url = git@github.com:libsdl-org/SDL_ttf.git
 	branch = main
-[submodule "ink-stroke-modeler"]
-	path = external/ink-stroke-modeler
-	url = git@github.com:google/ink-stroke-modeler.git
-	branch = main
-[submodule "pfr"]
-	path = external/pfr
-	url = https://github.com/boostorg/pfr.git
-	branch = master

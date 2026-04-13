@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 4.0)
 project(runa VERSION 0.0.1 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 17)
@@ -13,4 +13,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(${PROJECT_NAME})
 
+add_subdirectory(external EXCLUDE_FROM_ALL)
+
 add_subdirectory(source)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    external
+)
