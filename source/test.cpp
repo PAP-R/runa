@@ -19,7 +19,7 @@ struct Test : public Node {
         std::println("Tschüss dies war ein test {}", this->number);
     }
 
-    int test(int new_number = 0) {
+    int test(int new_number = 0) override {
         std::println("Hallo dies ist ein test {}", this->number);
         this->number = new_number;
         return this->number;
@@ -28,10 +28,15 @@ struct Test : public Node {
     void _update() override {
         std::println("Dies ist ein update");
     }
+
+    static std::shared_ptr<Test> create() {
+        return std::make_shared<Test>();
+    }
 };
 
 extern "C" {
-RUNE_API Test *create() {
-    return new Test();
+RUNE_API void init() {
+    printf("Initializing test\n");
+    Node::add_type("test", Test::create);
 }
 }

@@ -16,7 +16,3 @@ add_executable(${PROJECT_NAME})
 add_subdirectory(external EXCLUDE_FROM_ALL)
 
 add_subdirectory(source)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    external
-)

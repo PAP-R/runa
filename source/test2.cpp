@@ -12,14 +12,14 @@ struct Test : public Node {
     int number = 5;
 
     Test() {
-        _name = "Test";
+        _name = "Test2";
     }
 
     ~Test() {
         std::println("Tschüss dies war ein test2 {}", this->number);
     }
 
-    int test(int new_number = 0) {
+    int test(int new_number = 0) override {
         std::println("Hallo dies ist ein test2 {}", this->number);
         this->number = new_number;
         return this->number;
@@ -28,9 +28,18 @@ struct Test : public Node {
     void _update() override {
         std::println("Dies ist ein update2");
     }
+
+    static std::shared_ptr<Test> create() {
+        return std::make_shared<Test>();
+    }
 };
 
 extern "C" {
+RUNE_API void init() {
+    printf("Initializing test\n");
+    Node::add_type("test2", Test::create);
+}
+
 RUNE_API Test *create() {
     return new Test();
 }

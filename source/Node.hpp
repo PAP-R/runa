@@ -9,10 +9,12 @@
 
 #include <SDL3/SDL.h>
 
+#include "Log.hpp"
+
 class Node {
   protected:
     static inline std::shared_ptr<Node>                                         _root = nullptr;
-    static inline std::map<std::string, std::function<std::shared_ptr<Node>()>> _creationFunctions;
+    static inline std::map<std::string, std::function<std::shared_ptr<Node>()>> _createFunctions;
 
     Node                           *_parent = nullptr;
     std::set<std::shared_ptr<Node>> _children;
@@ -32,19 +34,21 @@ class Node {
   public:
     virtual int test(int new_number) { return 0; };
 
-    static void load(const std::string &name) {
-        auto obj = SDL_LoadObject(name.c_str());
-
-        if (obj) {
-            auto create = (Node * (*)()) SDL_LoadFunction(obj, "create");
-            if (create) {
-                _creationFunctions.insert(std::make_pair(name, [create]() { return std::shared_ptr<Node>(create()); }));
-            } else {
-                std::println("Failed to find function: {}", SDL_GetError());
+    static void add_type(const std::string &name, std::function<std::shared_ptr<Node>()> create_function) {
+        if (!_createFunctions.contains(name)) {
+            _createFunctions.insert(std::make_pair(name, create_function));
+            Log::println("Added Node type [{}]", name);
+            for (auto &t : _createFunctions) {
+                Log::println("\t[{}]", t.first);
             }
         } else {
-            std::println("Failed to find library: {}", SDL_GetError());
+            Log::println("Node type {} already exists", name);
         }
+    }
+
+    static void terminate() {
+        _createFunctions.clear();
+        _root.reset();
     }
 
     static std::shared_ptr<Node> root() {
@@ -71,8 +75,14 @@ class Node {
 
     template <class... Args>
     std::shared_ptr<Node> create_child(const std::string &name, Args... args) {
-        if (!_creationFunctions.contains(name)) return nullptr;
-        std::shared_ptr<Node> node = _creationFunctions[name](args...);
+        if (!_createFunctions.contains(name)) {
+            Log::println("Failed to find Node type [{}]", name);
+            for (auto &t : _createFunctions) {
+                Log::println("\t[{}]", t.first);
+            }
+            return nullptr;
+        }
+        std::shared_ptr<Node> node = _createFunctions[name](args...);
 
         add_child(node);
 

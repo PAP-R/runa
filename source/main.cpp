@@ -3,25 +3,42 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 
-#include "test.hpp"
-
-#include "Node.hpp"
-#include "Object.hpp"
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <iostream>
 #include <memory>
 #include <print>
 #include <string>
 
+#include "test.hpp"
+
+#include "Log.hpp"
+#include "Node.hpp"
+#include "Object.hpp"
+#include "Plugin.hpp"
+
+SDL_Window *create_window(const char *title, int width, int height, SDL_WindowFlags flags) {
+    auto window = SDL_CreateWindow(title, width, height, SDL_WINDOW_VULKAN | flags);
+
+    return window;
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
-    std::println("Hallo");
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        Log::println("Failed to initialize SDL:\n{}", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
 
-    std::string name;
+    if (!TTF_Init()) {
+        Log::println("Failed to initialize SDL TTF:\n{}", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
 
-    std::getline(std::cin, name);
+    Plugin::init();
 
-    Node::load(name);
-    auto test = Node::create(name);
+    auto test = Node::create("test2");
+
+    test->create_child("test");
 
     if (test) {
         test->test(7);
@@ -42,5 +59,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-    std::println("Tschüss");
+    Node::terminate();
+    Plugin::terminate();
+    SDL_Quit();
 }
