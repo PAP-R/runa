@@ -23,3 +23,7 @@
 	path = external/sdl-ttf
 	url = git@github.com:libsdl-org/SDL_ttf.git
 	branch = main
+[submodule "lief"]
+	path = external/lief
+	url = git@github.com:lief-project/LIEF.git
+	branch = main
