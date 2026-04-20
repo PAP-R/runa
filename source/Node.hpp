@@ -9,12 +9,13 @@
 
 #include <SDL3/SDL.h>
 
+#include "AppState.hpp"
 #include "Log.hpp"
 
 class Node {
   protected:
-    static inline std::shared_ptr<Node>                                         _root = nullptr;
-    static inline std::map<std::string, std::function<std::shared_ptr<Node>()>> _createFunctions;
+    static inline std::shared_ptr<Node>                                                   _root = nullptr;
+    static inline std::map<std::string, std::function<std::shared_ptr<Node>(AppState *)>> _createFunctions;
 
     Node                           *_parent = nullptr;
     std::set<std::shared_ptr<Node>> _children;
@@ -23,8 +24,8 @@ class Node {
 
     bool _inactive = false;
 
-    virtual void _update() {}
-    virtual void _event(SDL_Event *event) {}
+    virtual void _update(AppState *appstate) {}
+    virtual void _event(AppState *appstate, SDL_Event *event) {}
 
     Node() {
         _name = "Node";
@@ -32,9 +33,7 @@ class Node {
     }
 
   public:
-    virtual int test(int new_number) { return 0; };
-
-    static void add_type(const std::string &name, std::function<std::shared_ptr<Node>()> create_function) {
+    static void add_type(const std::string &name, std::function<std::shared_ptr<Node>(AppState *)> create_function) {
         if (!_createFunctions.contains(name)) {
             _createFunctions.insert(std::make_pair(name, create_function));
             Log::println("Added Node type [{}]", name);
@@ -57,6 +56,10 @@ class Node {
         }
 
         return _root;
+    }
+
+    virtual ~Node() {
+        std::println("Destroying {}", to_string());
     }
 
     void add_child(std::shared_ptr<Node> node) {
@@ -89,6 +92,14 @@ class Node {
         return node;
     }
 
+    void enable() {
+        this->_inactive = false;
+    }
+
+    void disable() {
+        this->_inactive = true;
+    }
+
     template <class... Args>
     static inline std::shared_ptr<Node> create(const std::string &name, Args... args) {
         return root()->create_child(name, args...);
@@ -98,28 +109,24 @@ class Node {
         return std::shared_ptr<Node>(new Node());
     }
 
-    void update() {
+    void update(AppState *appstate) {
         if (_inactive) return;
 
         for (auto &c : _children) {
-            c->update();
+            c->update(appstate);
         }
 
-        _update();
+        _update(appstate);
     }
 
-    void event(SDL_Event *event) {
+    void event(AppState *appstate, SDL_Event *event) {
         if (_inactive) return;
 
         for (auto &c : _children) {
-            c->event(event);
+            c->event(appstate, event);
         }
 
-        _event(event);
-    }
-
-    virtual ~Node() {
-        std::println("Destroying {}", to_string());
+        _event(appstate, event);
     }
 
     virtual std::string to_string() {

@@ -5,8 +5,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <LIEF/LIEF.hpp>
-
 #include "Log.hpp"
 
 #ifdef _WIN32
@@ -46,19 +44,6 @@ namespace Plugin {
         }
 
         std::string path = std::format("{}{}", dirname, fname);
-
-        // auto bin         = LIEF::Parser::parse(path);
-
-        // if (bin) {
-        //     Log::println("\t[ {} ]", LIEF::to_string(bin->format()));
-        //     auto functions = bin->exported_functions();
-
-        //     for (const auto &f : bin->exported_functions()) {
-        //         auto name = f.name();
-        //         if (name.rfind("_Z", 0) == 0) continue;
-        //         Log::println("\t{}", f.name());
-        //     }
-        // }
 
         load(path);
 

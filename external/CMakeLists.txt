@@ -2,12 +2,6 @@ add_subdirectory(glm)
 
 add_subdirectory(ink-stroke-modeler)
 
-option(LIEF_DOC "Build LIEF docs" OFF)
-option(LIEF_PYTHON_API "Build LIEF Python API" OFF)
-option(LIEF_EXAMPLES "Build LIEF examples" OFF)
-option(LIEF_TESTS "Build LIEF tests" OFF)
-add_subdirectory(lief)
-
 option(SDL_SHARED "Build SDLs shared lib" ON)
 option(SDL_STATIC "Build static lib" OFF)
 option(SDL_TEST "Build SDL tests" OFF)
@@ -37,5 +31,4 @@ target_link_libraries(external INTERFACE
     SDL3::SDL3
     SDL3_shadercross-shared
     SDL3_ttf::SDL3_ttf
-	LIEF::LIEF
 )

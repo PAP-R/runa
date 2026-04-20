@@ -1,9 +1,14 @@
-add_library(${PROJECT_NAME}_lib SHARED 
+set(SOURCES
     Object.hpp
 	Node.cpp
     Node.hpp
     Plugin.hpp
 	Log.hpp
+)
+
+add_library(${PROJECT_NAME}_lib SHARED
+${SOURCES}
+Window.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC external)
@@ -22,5 +27,10 @@ LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
 target_sources(${PROJECT_NAME} PUBLIC
     main.cpp
 )
-
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_lib)
+
+add_library(main SHARED
+	main.cpp
+)
+target_link_libraries(main PUBLIC ${PROJECT_NAME}_lib)
+
