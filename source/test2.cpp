@@ -1,12 +1,6 @@
-#pragma once
-
-#ifdef _WIN32
-#define RUNA_API __declspec(dllexport)
-#else
-#define RUNA_API __attribute__((visibility("default")))
-#endif
-
+#include "Log.hpp"
 #include "Node.hpp"
+#include "PluginHeader.hpp"
 
 struct Test : public Node {
     int number = 5;
@@ -19,14 +13,12 @@ struct Test : public Node {
         std::println("Tschüss dies war ein test2 {}", this->number);
     }
 
-    int test(int new_number = 0) override {
-        std::println("Hallo dies ist ein test2 {}", this->number);
-        this->number = new_number;
-        return this->number;
+    void _update(AppState *appstate) override {
+        Log::println("Dies ist ein update2");
     }
 
-    void _update() override {
-        std::println("Dies ist ein update2");
+    void _event(AppState *appstate, SDL_Event *event) override {
+        Log::println("Dies ist ein event");
     }
 
     static std::shared_ptr<Test> create() {
@@ -34,9 +26,8 @@ struct Test : public Node {
     }
 };
 
-extern "C" {
-RUNA_API void init() {
+RUNA_API_HEADER("test2", 0, 0, {})
+
+RUNA_API_INIT(
     printf("Initializing test\n");
-    Node::add_type("test2", Test::create);
-}
-}
+    Node::add_type("test2", Test::create);)

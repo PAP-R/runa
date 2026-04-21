@@ -3,6 +3,7 @@ set(SOURCES
 	Node.cpp
     Node.hpp
     Plugin.hpp
+	PluginHeader.hpp
 	Log.hpp
 )
 

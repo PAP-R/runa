@@ -1,12 +1,5 @@
-#pragma once
-
-#ifdef _WIN32
-#define RUNA_API __declspec(dllexport)
-#else
-#define RUNA_API __attribute__((visibility("default")))
-#endif
-
 #include "Node.hpp"
+#include "PluginHeader.hpp"
 
 struct Test : public Node {
     int number = 5;
@@ -19,13 +12,7 @@ struct Test : public Node {
         std::println("Tschüss dies war ein test {}", this->number);
     }
 
-    int test(int new_number = 0) override {
-        std::println("Hallo dies ist ein test {}", this->number);
-        this->number = new_number;
-        return this->number;
-    }
-
-    void _update() override {
+    void _update(AppState *appstate) override {
         std::println("Dies ist ein update");
     }
 

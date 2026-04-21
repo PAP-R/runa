@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <functional>
 #include <map>
 #include <memory>
@@ -14,8 +15,8 @@
 
 class Node {
   protected:
-    static inline std::shared_ptr<Node>                                                   _root = nullptr;
-    static inline std::map<std::string, std::function<std::shared_ptr<Node>(AppState *)>> _createFunctions;
+    static inline std::shared_ptr<Node>           _root = nullptr;
+    static inline std::map<std::string, std::any> _createFunctions;
 
     Node                           *_parent = nullptr;
     std::set<std::shared_ptr<Node>> _children;
@@ -33,7 +34,7 @@ class Node {
     }
 
   public:
-    static void add_type(const std::string &name, std::function<std::shared_ptr<Node>(AppState *)> create_function) {
+    static void add_type(const std::string &name, std::any create_function) {
         if (!_createFunctions.contains(name)) {
             _createFunctions.insert(std::make_pair(name, create_function));
             Log::println("Added Node type [{}]", name);
@@ -85,7 +86,7 @@ class Node {
             }
             return nullptr;
         }
-        std::shared_ptr<Node> node = _createFunctions[name](args...);
+        std::shared_ptr<Node> node = any_cast<std::function<std::shared_ptr<Node>(Args...)>>(_createFunctions[name])(args...);
 
         add_child(node);
 

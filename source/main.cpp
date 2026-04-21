@@ -10,28 +10,10 @@
 #include <print>
 #include <string>
 
-#include "test.hpp"
-
 #include "Log.hpp"
 #include "Node.hpp"
 #include "Object.hpp"
 #include "Plugin.hpp"
-
-SDL_Window *create_window(AppState *appstate, const char *title, int width, int height, SDL_WindowFlags flags = 0) {
-    auto window = SDL_CreateWindow(title, width, height, SDL_WINDOW_VULKAN | flags);
-
-    SDL_ClaimWindowForGPUDevice(appstate->device, window);
-
-    appstate->windows.insert(window);
-
-    return window;
-}
-
-void destroy_window(AppState *appstate, SDL_Window *window) {
-    appstate->windows.erase(window);
-    SDL_ReleaseWindowFromGPUDevice(appstate->device, window);
-    SDL_DestroyWindow(window);
-}
 
 SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -52,17 +34,12 @@ SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
 
     auto test2 = test->create_child("test");
 
-    if (test) {
-        test->test(7);
-        test->test(12);
-    }
-
     test->disable();
     test2->disable();
 
     appstate->device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
 
-    auto window      = create_window(appstate, "Hallo", 400, 400);
+    // auto window      = create_window(appstate, "Hallo", 400, 400);
 
     *appstate_ptr    = appstate;
 
@@ -72,7 +49,7 @@ SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
 SDL_AppResult SDL_AppIterate(void *appstate_ptr) {
     auto appstate = (AppState *)appstate_ptr;
 
-    Node::root()->update();
+    Node::root()->update(appstate);
     return SDL_APP_CONTINUE;
 }
 
@@ -84,6 +61,7 @@ SDL_AppResult SDL_AppEvent(void *appstate_ptr, SDL_Event *event) {
 
         SDL_DestroyWindow(window);
     }
+    Node::root()->event(appstate, event);
 
     return SDL_APP_CONTINUE;
 }
@@ -92,10 +70,6 @@ void SDL_AppQuit(void *appstate_ptr, SDL_AppResult result) {
     auto appstate = (AppState *)appstate_ptr;
     Node::terminate();
     Plugin::terminate();
-
-    for (auto w : appstate->windows) {
-        destroy_window(appstate, w);
-    }
 
     SDL_DestroyGPUDevice(appstate->device);
     delete appstate;
