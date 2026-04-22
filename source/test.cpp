@@ -12,18 +12,19 @@ struct Test : public Node {
         std::println("Tschüss dies war ein test {}", this->number);
     }
 
-    void _update(AppState *appstate) override {
+    void _update(ArgMap args) override {
         std::println("Dies ist ein update");
     }
 
-    static std::shared_ptr<Test> create() {
-        return std::make_shared<Test>();
+    static std::shared_ptr<Test> create(ArgMap args) {
+        auto test = std::make_shared<Test>();
+
+        _nodeSet.insert(test);
+
+        return test;
     }
 };
 
-extern "C" {
-RUNA_API void init() {
+RUNA_API_INIT(
     printf("Initializing test\n");
-    Node::add_type("test", Test::create);
-}
-}
+    Node::add_type("test", Test::create);)

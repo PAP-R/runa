@@ -30,38 +30,47 @@ SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
 
     Plugin::init();
 
-    auto test  = Node::create("test2");
+    appstate->device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
 
-    auto test2 = test->create_child("test");
+    auto window      = Node::create("window", appstate, {
+                                                            {{"WindowTitle", std::string("Test")}, {"WindowWidth", 400}, {"WindowHeight", 400}, {"WindowFlags", SDL_WINDOW_RESIZABLE}}
+    });
+
+    Log::println("Created {} as temporary variable", window->to_string());
+
+    auto test  = window->create_child("test2", appstate);
+    auto test2 = test->create_child("test", appstate);
 
     test->disable();
     test2->disable();
 
-    appstate->device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
-
-    // auto window      = create_window(appstate, "Hallo", 400, 400);
-
-    *appstate_ptr    = appstate;
-
+    *appstate_ptr = appstate;
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate_ptr) {
-    auto appstate = (AppState *)appstate_ptr;
+    auto appstate            = (AppState *)appstate_ptr;
+    appstate->command_buffer = SDL_AcquireGPUCommandBuffer(appstate->device);
 
-    Node::root()->update(appstate);
+    Node::update(appstate);
+
+    SDL_SubmitGPUCommandBuffer(appstate->command_buffer);
+
+    // auto fence = SDL_SubmitGPUCommandBufferAndAcquireFence(appstate->command_buffer);
+    // SDL_WaitForGPUFences(appstate->device, true, &fence, 1);
+    // SDL_ReleaseGPUFence(appstate->device, fence);
+
+    if (appstate->should_quit) {
+        return SDL_APP_SUCCESS;
+    }
+
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate_ptr, SDL_Event *event) {
     auto appstate = (AppState *)appstate_ptr;
 
-    if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-        auto window = SDL_GetWindowFromEvent(event);
-
-        SDL_DestroyWindow(window);
-    }
-    Node::root()->event(appstate, event);
+    Node::event(event, appstate);
 
     return SDL_APP_CONTINUE;
 }

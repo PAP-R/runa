@@ -5,7 +5,7 @@
 struct Test : public Node {
     int number = 5;
 
-    Test() {
+    Test(ArgMap args) {
         _name = "Test2";
     }
 
@@ -13,16 +13,20 @@ struct Test : public Node {
         std::println("Tschüss dies war ein test2 {}", this->number);
     }
 
-    void _update(AppState *appstate) override {
+    void _update(ArgMap args) override {
         Log::println("Dies ist ein update2");
     }
 
-    void _event(AppState *appstate, SDL_Event *event) override {
+    void _event(SDL_Event *event, ArgMap args) override {
         Log::println("Dies ist ein event");
     }
 
-    static std::shared_ptr<Test> create() {
-        return std::make_shared<Test>();
+    static std::shared_ptr<Test> create(ArgMap args) {
+        auto test = std::make_shared<Test>(args);
+
+        _nodeSet.insert(test);
+
+        return test;
     }
 };
 
