@@ -28,17 +28,17 @@ struct PluginHeader {
 #define RUNA_API __attribute__((visibility("default")))
 #endif
 
-#define RUNA_API_INIT(code)       \
+#define RUNA_INIT(code)           \
     extern "C" {                  \
     RUNA_API void init() { code } \
     }
 
-#define RUNA_API_HEADER(name, version_major, version_minor, dependencies) \
-    extern "C" {                                                          \
-    RUNA_API struct PluginHeader header() {                               \
-        return {                                                          \
+#define RUNA_HEADER(name, version_major, version_minor, dependencies) \
+    extern "C" {                                                      \
+    RUNA_API struct PluginHeader header() {                           \
+        return {                                                      \
             name, {version_major, version_minor}, \
              dependencies \
-        };          \
-    }                                                                     \
+        };      \
+    }                                                                 \
     }

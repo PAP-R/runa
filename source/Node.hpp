@@ -67,19 +67,19 @@ class Node {
         if (!_createFunctions.contains(name) && create_function) {
             _createFunctions.insert(std::make_pair(name, create_function.value()));
         } else {
-            Log::println("Node type {} already exists", name);
+            Log::println(Log::WARNING, "Node type {} already exists", name);
         }
 
         if (!_updateFunctions.contains(name) && update_function) {
             _updateFunctions.insert(std::make_pair(name, update_function.value()));
         } else {
-            Log::println("Update function for {} already exists", name);
+            Log::println(Log::WARNING, "Update function for {} already exists", name);
         }
 
         if (!_eventFunctions.contains(name) && event_function) {
             _eventFunctions.insert(std::make_pair(name, event_function.value()));
         } else {
-            Log::println("Event function for {} already exists", name);
+            Log::println(Log::WARNING, "Event function for {} already exists", name);
         }
     }
 
@@ -138,7 +138,7 @@ class Node {
 
     void remove_child(Node *node) {
         if (node) {
-            Log::println("Removing {} from {} Child", node->to_string(), to_string());
+            Log::println(Log::INFO, "Removing {} from {} Child", node->to_string(), to_string());
             node->_parent = nullptr;
             std::erase_if(_children, [node](auto &n) { return node == n.get(); });
         }
@@ -153,9 +153,9 @@ class Node {
 
     std::shared_ptr<Node> create_child(const std::string &name, AppState *appstate, ArgMap args = {}) {
         if (!_createFunctions.contains(name)) {
-            Log::println("Failed to find Node type [{}]", name);
+            Log::println(Log::WARNING, "Failed to find Node type [{}]", name);
             for (auto &t : _createFunctions) {
-                Log::println("\t[{}]", t.first);
+                Log::println(Log::WARNING, "\t[{}]", t.first);
             }
             return nullptr;
         }
@@ -194,9 +194,9 @@ class Node {
     }
 
     static void print(const std::string &addition = "") {
-        Log::println("Nodes: {}", addition);
+        Log::println(Log::INFO, "Nodes: {}", addition);
         for (auto &n : _nodeSet) {
-            Log::println("\t{} : {}", n->to_string(), n.use_count());
+            Log::println(Log::INFO, "\t{} : {}", n->to_string(), n.use_count());
         }
     }
 };

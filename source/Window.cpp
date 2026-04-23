@@ -37,7 +37,7 @@ class Window : public Node {
 
                 w->remove();
 
-                Log::println("Removing {} from window set", w->to_string());
+                Log::println(Log::INFO, "Removing {} from window set", w->to_string());
                 _window_set.erase(w);
             }
         }
@@ -47,7 +47,7 @@ class Window : public Node {
     create(ArgMap args) {
         auto window = std::make_shared<Window>();
 
-        Log::println("{}:{} : {} : {}", __FILE__, __LINE__, window->to_string(), window.use_count());
+        Log::println(Log::INFO, "{}:{} : {} : {}", __FILE__, __LINE__, window->to_string(), window.use_count());
 
         auto            appstate = args.get<AppState *>("AppState");
         auto            title    = args.get<std::string>("WindowTitle");
@@ -57,26 +57,21 @@ class Window : public Node {
         window->_device       = appstate->device;
         window->_window       = SDL_CreateWindow(title.c_str(), width, height, flags | SDL_WINDOW_VULKAN);
         if (!window->_window) {
-            Log::println("Failed to create window: {}", SDL_GetError());
+            Log::println(Log::ERROR, "Failed to create window: {}", SDL_GetError());
             return nullptr;
         }
 
         SDL_ClaimWindowForGPUDevice(window->_device, window->_window);
 
-        Log::println("{}:{} : {} : {}", __FILE__, __LINE__, window->to_string(), window.use_count());
         _window_set.insert(window);
-        Log::println("{}:{} : {} : {}", __FILE__, __LINE__, window->to_string(), window.use_count());
-
         _nodeSet.insert(window);
-        Log::println("{}:{} : {} : {}", __FILE__, __LINE__, window->to_string(), window.use_count());
-
         return window;
     }
 
     static void event(SDL_Event *event, ArgMap args = {}) {
         if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
             auto window = SDL_GetWindowFromEvent(event);
-            if (!window) Log::println("Failed to get window {}", SDL_GetError());
+            if (!window) Log::println(Log::ERROR, "Failed to get window {}", SDL_GetError());
 
             Window::destroy(window);
 
@@ -89,5 +84,7 @@ class Window : public Node {
     }
 };
 
-RUNA_API_INIT(
+RUNA_HEADER("window", 0, 0, {})
+
+RUNA_INIT(
     Node::add_type("window", Window::create, std::nullopt, Window::event);)

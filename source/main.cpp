@@ -17,12 +17,12 @@
 
 SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        Log::println("Failed to initialize SDL:\n{}", SDL_GetError());
+        Log::println(Log::ERROR, "Failed to initialize SDL:\n{}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
     if (!TTF_Init()) {
-        Log::println("Failed to initialize SDL TTF:\n{}", SDL_GetError());
+        Log::println(Log::ERROR, "Failed to initialize SDL TTF:\n{}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -36,7 +36,7 @@ SDL_AppResult SDL_AppInit(void **appstate_ptr, int argc, char **argv) {
                                                             {{"WindowTitle", std::string("Test")}, {"WindowWidth", 400}, {"WindowHeight", 400}, {"WindowFlags", SDL_WINDOW_RESIZABLE}}
     });
 
-    Log::println("Created {} as temporary variable", window->to_string());
+    Log::println(Log::INFO, "Created {} as temporary variable", window->to_string());
 
     auto test  = window->create_child("test2", appstate);
     auto test2 = test->create_child("test", appstate);

@@ -25,6 +25,8 @@ struct Test : public Node {
     }
 };
 
-RUNA_API_INIT(
-    printf("Initializing test\n");
+RUNA_HEADER("test", 0, 0, {})
+
+RUNA_INIT(
+    Log::println(Log::INFO, "Initializing test\n");
     Node::add_type("test", Test::create);)

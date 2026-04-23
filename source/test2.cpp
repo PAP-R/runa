@@ -10,15 +10,15 @@ struct Test : public Node {
     }
 
     ~Test() {
-        std::println("Tschüss dies war ein test2 {}", this->number);
+        Log::println(Log::INFO, "Tschüss dies war ein test2 {}", this->number);
     }
 
     void _update(ArgMap args) override {
-        Log::println("Dies ist ein update2");
+        Log::println(Log::INFO, "Dies ist ein update2");
     }
 
     void _event(SDL_Event *event, ArgMap args) override {
-        Log::println("Dies ist ein event");
+        Log::println(Log::INFO, "Dies ist ein event");
     }
 
     static std::shared_ptr<Test> create(ArgMap args) {
@@ -30,8 +30,8 @@ struct Test : public Node {
     }
 };
 
-RUNA_API_HEADER("test2", 0, 0, {})
+RUNA_HEADER("test2", 0, 0, {})
 
-RUNA_API_INIT(
+RUNA_INIT(
     printf("Initializing test\n");
     Node::add_type("test2", Test::create);)
