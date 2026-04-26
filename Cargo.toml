@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["lib"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[package]
+name = "runa"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hot-lib-reloader = "0.8"
+lib = { path = "lib" }
+bevy = { version = "0.18.1", features = ["dynamic_linking"] }
