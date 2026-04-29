@@ -1,11 +1,15 @@
-use std::sync::Arc;
+use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 
+use pollster::FutureExt;
+use tracing::{debug, error, info};
 use winit::{
     application::ApplicationHandler,
+    dpi::PhysicalSize,
     event::{KeyEvent, WindowEvent},
     event_loop::{self, ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, KeyCode, PhysicalKey},
-    window::Window,
+    platform::x11::ActiveEventLoopExtX11,
+    window::{self, Window, WindowAttributes, WindowId},
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -13,18 +17,20 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
-pub struct State {
+pub struct WindowState {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
-    window: Arc<Window>,
+    render_pipeline: wgpu::RenderPipeline,
+    window: Arc<dyn Window>,
 }
 
-impl State {
-    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
-        let size = window.inner_size();
+impl WindowState {
+    pub async fn new(app: &App, window: Box<dyn Window>) -> anyhow::Result<Self> {
+        let window: Arc<dyn Window> = Arc::from(window);
+        let size = window.surface_size();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             #[cfg(not(target_arch = "wasm32"))]
@@ -81,26 +87,84 @@ impl State {
             desired_maximum_frame_latency: 2,
         };
 
-        Ok(Self {
+        let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[],
+                immediate_size: 0,
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview_mask: None,
+            cache: None,
+        });
+
+        let mut state = Self {
             surface,
             device,
             queue,
             config,
             is_surface_configured: false,
+            render_pipeline,
             window,
-        })
+        };
+
+        state.resize(size);
+
+        Ok(state)
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.config.width = width;
-            self.config.height = height;
-            self.surface.configure(&self.device, &self.config);
-            self.is_surface_configured = true;
+    pub fn resize(&mut self, size: PhysicalSize<u32>) {
+        let (width, height) = (size.width, size.height);
+
+        if width == 0 || height == 0 {
+            return;
         }
+
+        self.config.width = width;
+        self.config.height = height;
+        self.surface.configure(&self.device, &self.config);
+        self.is_surface_configured = true;
+
+        self.window.request_redraw();
     }
 
-    pub fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+    pub fn handle_key(&self, event_loop: &dyn ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
             _ => {}
@@ -145,7 +209,7 @@ impl State {
             });
 
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -166,6 +230,9 @@ impl State {
                 timestamp_writes: None,
                 multiview_mask: None,
             });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(0..3, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -176,111 +243,116 @@ impl State {
 }
 
 struct App {
-    #[cfg(target_arch = "wasm32")]
-    proxy: Option<winit::event_loop::EventLoopProxy<State>>,
-    state: Option<State>,
+    windows: HashMap<WindowId, WindowState>,
 }
 
 impl App {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
+    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<WindowState>) -> Self {
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
         Self {
-            state: None,
-            #[cfg(target_arch = "wasm32")]
-            proxy,
+            windows: Default::default(),
         }
+    }
+
+    fn create_window(&mut self, event_loop: &dyn ActiveEventLoop) -> anyhow::Result<WindowId> {
+        #[allow(unused_mut)]
+        let mut window_attributes = WindowAttributes::default();
+
+        #[cfg(x11_platform)]
+        if event_loop.is_x11() {
+            window_attributes = window_attributes
+                .with_platform_attributes(Box::new(window_attributes_x11(event_loop)?));
+        }
+
+        #[cfg(wayland_platform)]
+        if event_loop.is_wayland() {
+            window_attributes = window_attributes
+                .with_platform_attributes(Box::new(window_attributes_wayland(event_loop)));
+        }
+
+        #[cfg(macos_platform)]
+        if let Some(tab_id) = _tab_id {
+            let window_attributes_macos =
+                Box::new(WindowAttributesMacOS::default().with_tabbing_identifier(&tab_id));
+            window_attributes = window_attributes.with_platform_attributes(window_attributes_macos);
+        }
+
+        #[cfg(web_platform)]
+        {
+            window_attributes =
+                window_attributes.with_platform_attributes(Box::new(window_attributes_web()));
+        }
+
+        let window = event_loop.create_window(window_attributes)?;
+
+        #[cfg(ios_platform)]
+        {
+            use winit::platform::ios::WindowExtIOS;
+            window.recognize_doubletap_gesture(true);
+            window.recognize_pinch_gesture(true);
+            window.recognize_rotation_gesture(true);
+            window.recognize_pan_gesture(true, 2, 2);
+        }
+
+        let window_state = WindowState::new(self, window).block_on().unwrap();
+        let window_id = window_state.window.id();
+
+        info!("Created window with id={window_id:?}");
+        self.windows.insert(window_id, window_state);
+        Ok(window_id)
     }
 }
 
-impl ApplicationHandler<State> for App {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        #[allow(unused_mut)]
-        let mut window_attributes = Window::default_attributes();
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            use wasm_bindgen::JsCast;
-            use winit::platform::web::WindowAttributesExtWebSys;
-
-            const CANVAS_ID: &str = "canvas";
-
-            let window = wgpu::web_sys::window().unwrap_throw();
-            let document = window.document().unwrap_throw();
-            let canvas = document.get_element_by_id(CANVAS_ID).unwrap_throw();
-            let html_canvas_element = canvas.unchecked_into();
-            window_attributes = window_attributes.with_canvas(Some(html_canvas_element));
-        }
-
-        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.state = Some(pollster::block_on(State::new(window)).unwrap());
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(proxy) = self.proxy.take() {
-                wasm_bindgen_futures::spawn_local(async move {
-                    assert!(
-                        proxy
-                            .send_event(State::new(window).await.expect("Unable to create canvas"))
-                            .is_ok()
-                    )
-                });
-            }
-        }
-    }
-
-    #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            event.window.request_redraw();
-            event.resize(
-                event.window.inner_size().width,
-                event.window.inner_size().height,
-            );
-        }
-        self.state = Some(event);
-    }
-
+impl ApplicationHandler for App {
     fn window_event(
         &mut self,
-        event_loop: &ActiveEventLoop,
+        event_loop: &dyn ActiveEventLoop,
         window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let state = match &mut self.state {
-            Some(canvas) => canvas,
-            None => return,
-        };
-
-        match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => state.resize(size.width, size.height),
-            WindowEvent::RedrawRequested => {
-                state.update();
-                match state.render() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        log::error!("{e}");
-                        event_loop.exit();
+        if let Some(state) = self.windows.get_mut(&window_id) {
+            match event {
+                WindowEvent::CloseRequested => event_loop.exit(),
+                WindowEvent::SurfaceResized(size) => state.resize(size),
+                WindowEvent::RedrawRequested => {
+                    state.update();
+                    match state.render() {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::error!("{e}");
+                            event_loop.exit();
+                        }
                     }
                 }
+                WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            physical_key: PhysicalKey::Code(code),
+                            state: key_state,
+                            ..
+                        },
+                    ..
+                } => state.handle_key(event_loop, code, key_state.is_pressed()),
+                WindowEvent::PointerMoved {
+                    device_id,
+                    position,
+                    primary,
+                    source,
+                } => match source {
+                    winit::event::PointerSource::TabletTool { kind, data } => {
+                        info!("TabletToolData: {data:?}")
+                    }
+                    _ => {}
+                },
+                _ => {}
             }
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => state.handle_key(event_loop, code, key_state.is_pressed()),
-            _ => println!("Event: {:?}", event),
         }
+    }
+
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.create_window(event_loop)
+            .expect("Failed to create initial window");
     }
 }
 
@@ -295,11 +367,12 @@ pub fn run() -> anyhow::Result<()> {
         console_log::init_with_level(log::Level::Info).unwrap_throw();
     }
 
-    let event_loop = EventLoop::with_user_event().build()?;
+    let event_loop = EventLoop::new()?;
+
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let mut app = App::new();
-        event_loop.run_app(&mut app);
+        let app = App::new();
+        event_loop.run_app(app);
     }
 
     #[cfg(target_arch = "wasm32")]

@@ -5,11 +5,15 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
-winit = { version = "0.30.13", features = ["android-native-activity"] }
+winit = { version = "0.31.0-beta.2", features = ["android-native-activity"] }
 env_logger = "0.11.10"
-log = "0.4.29"
+log = { version = "0.4.29", features = [
+	"max_level_debug",
+	"release_max_level_debug",
+] }
 wgpu = "29.0.1"
 pollster = "0.4.0"
+tracing = "0.1.44"
 
 [lib]
 path = "src/main.rs"
