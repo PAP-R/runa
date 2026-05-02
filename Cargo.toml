@@ -14,6 +14,8 @@ log = { version = "0.4.29", features = [
 wgpu = "29.0.1"
 pollster = "0.4.0"
 tracing = "0.1.44"
+bytemuck = { version = "1.24", features = ["derive"] }
+
 
 [lib]
 path = "src/main.rs"
