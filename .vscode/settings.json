@@ -1,0 +1,3 @@
+{
+	"rust-analyzer.runnables.extraEnv": { "RUST_LOG": "info" }
+}

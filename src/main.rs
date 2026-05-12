@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 
+use log::{debug, error, info};
 use pollster::FutureExt;
-use tracing::{debug, error, info};
 use wgpu::util::DeviceExt;
 use winit::{
     application::ApplicationHandler,
@@ -9,9 +9,11 @@ use winit::{
     event::{KeyEvent, WindowEvent},
     event_loop::{self, ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, KeyCode, PhysicalKey},
-    platform::x11::ActiveEventLoopExtX11,
     window::{self, Window, WindowAttributes, WindowId},
 };
+
+mod util;
+use util::DynamicBuffer;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -42,23 +44,23 @@ const VERTICES: &[Vertex] = &[
     Vertex {
         position: [-0.0868241, 0.49240386, 0.0],
         color: [0.5, 0.0, 0.5],
-    }, // A
+    },
     Vertex {
         position: [-0.49513406, 0.06958647, 0.0],
         color: [0.5, 0.0, 0.5],
-    }, // B
+    },
     Vertex {
         position: [-0.21918549, -0.44939706, 0.0],
         color: [0.5, 0.0, 0.5],
-    }, // C
+    },
     Vertex {
         position: [0.35966998, -0.3473291, 0.0],
         color: [0.5, 0.0, 0.5],
-    }, // D
+    },
     Vertex {
         position: [0.44147372, 0.2347359, 0.0],
         color: [0.5, 0.0, 0.5],
-    }, // E
+    },
 ];
 
 const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
@@ -240,6 +242,37 @@ impl WindowState {
         }
     }
 
+    fn input(&mut self, event: WindowEvent) {
+        match event {
+            WindowEvent::PointerButton {
+                device_id,
+                state,
+                position,
+                primary,
+                button,
+            } => {
+                info!(
+                    "PointerButton({device_id:?}, {state:?}, {position:?}, {primary:?}, {button:?})"
+                );
+            }
+            WindowEvent::KeyboardInput {
+                device_id,
+                event,
+                is_synthetic,
+            } => info!("KeyBoardInput({device_id:?}, {event:?}, {is_synthetic:?})"),
+            _ => info!("Input: {event:?}"),
+        }
+    }
+
+    fn event(&mut self, event: WindowEvent) {
+        match event {
+            WindowEvent::PointerButton { .. }
+            | WindowEvent::KeyboardInput { .. }
+            | WindowEvent::MouseWheel { .. } => self.input(event),
+            _ => info!("{event:?}"),
+        }
+    }
+
     fn update(&mut self) {}
 
     pub fn render(&mut self) -> anyhow::Result<()> {
@@ -396,27 +429,7 @@ impl ApplicationHandler for App {
                         }
                     }
                 }
-                WindowEvent::KeyboardInput {
-                    event:
-                        KeyEvent {
-                            physical_key: PhysicalKey::Code(code),
-                            state: key_state,
-                            ..
-                        },
-                    ..
-                } => state.handle_key(event_loop, code, key_state.is_pressed()),
-                WindowEvent::PointerMoved {
-                    device_id,
-                    position,
-                    primary,
-                    source,
-                } => match source {
-                    winit::event::PointerSource::TabletTool { kind, data } => {
-                        info!("TabletToolData: {data:?}")
-                    }
-                    _ => {}
-                },
-                _ => {}
+                _ => state.event(event),
             }
         }
     }
